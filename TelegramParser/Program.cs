@@ -11,7 +11,7 @@ namespace TelegramParser
         {
             List<TLMessage> _resultMessages = new List<TLMessage>();
 
-            using (TelegramClient client = new TelegramClient(17506674, "ec2059577f1ca20c66dac358f1827d56"))
+            using (TelegramClient client = new TelegramClient("YOUR ID", "YOUR HASH"))
             {
                 await DAL.Login(client);
                 await DAL.FindGroup(client, _resultMessages);
