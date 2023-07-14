@@ -3,24 +3,41 @@ using TeleSharp.TL.Messages;
 using TeleSharp.TL;
 using TLSharp.Core;
 using System.Text.RegularExpressions;
+using OfficeOpenXml;
+using OfficeOpenXml.Drawing.Chart;
 
 namespace TelegramParser
 {
     public static class DAL
     {
+       
         public static async Task Login(TelegramClient client)
         {
+            string hash;
+
             await client.ConnectAsync();
-
-            Console.Write("Enter your number:");
+            await Console.Out.WriteAsync("Enter your number:");
             string number = Console.ReadLine();
+            try
+            {
+                hash = await client.SendCodeRequestAsync(number);
 
-            var hash = await client.SendCodeRequestAsync(number);
+                await Console.Out.WriteAsync("Enter your code:");
+                string code = Console.ReadLine();
 
-            Console.WriteLine("Enter your code:");
-            string code = Console.ReadLine();
+                var user = await client.MakeAuthAsync(number, hash, code);
 
-            var user = await client.MakeAuthAsync(number, hash, code);
+            }
+            catch
+            {
+                hash = await client.SendCodeRequestAsync(number);
+
+                await Console.Out.WriteAsync("Enter your code:");
+                string code = Console.ReadLine();
+
+                var user = await client.MakeAuthAsync(number, hash, code);
+            }
+
         }
         public static async Task FindGroup(TelegramClient client, List<TLMessage> _resultMessages)
         {
@@ -55,13 +72,14 @@ namespace TelegramParser
 
                 offset = _resultMessages.Last().Id;
             }
+
         }
         public static void NumberRegex(List<TLMessage> _resultMessages)
         {
             Regex regex = new Regex(@"\b(\+?(\d{1,3}))?[-. (]*(\d{2,4})[-. )]*(\d{2,4})[-. ]*(\d{2,4})[-. ]*(\d{2,4})[-. ]*(\d{2,4})\b");
-            List<string> phoneNumbers = _resultMessages.SelectMany(m => regex.Matches(m.Message).Cast<Match>().Select(match => match.Value)).Distinct().ToList();
+            List<string> phoneNumbers = _resultMessages.SelectMany(m => regex.Matches(m.Message).Cast<Match>().Select(match => '+' + match.Value)).Distinct().ToList();
 
-            SaveToTxt(phoneNumbers);
+            SaveToXlsx(phoneNumbers);
         }
         public static void SaveToTxt(List<string> phoneNumbers)
         {
@@ -73,6 +91,22 @@ namespace TelegramParser
                     stream.WriteLine(number);
                 }
             }
+        }
+        public static void SaveToXlsx(List<string> phoneNumbers)
+        {
+            ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+            using var package = new ExcelPackage();
+            string path = Directory.GetCurrentDirectory() + "numbers.xlsx";
+            ExcelWorksheet worksheet = package.Workbook.Worksheets.Add("Numbers");
+
+            //Add collection of numbers to the worksheet
+
+            for (int i = 0; i < phoneNumbers.Count; i++)
+            {
+                worksheet.Cells["A" + (i + 1)].Value = phoneNumbers[i];
+            }
+
+            package.SaveAs(new FileInfo(path));
         }
     }
 }
